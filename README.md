@@ -1,1 +1,1 @@
-This repository is a publc repository containig deffrent school projects i have worked on.
+This repository contains deffrent school projects i have worked on.
