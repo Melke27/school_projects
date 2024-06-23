@@ -1,9 +1,4 @@
-/**Name of Group Member              Id             section
-1.Surafel Fikru.................UGR/35454/16..........49
-2.Lamesa Fekede.................UGR/34787/16..........49
-3.Birhanu Habtamu...............UGR/34109/16..........49
-4.Robel Michael.................UGR/35282/16..........49
-**/
+/*Developed by: Melkamu Wako*/
 
 
 #include <iostream>//For cin and cout
@@ -342,7 +337,7 @@ void mainMenu(const string& filename) {
         cout << "Main Menu\n";
         cout << "1. Login as a Teacher\n";
         cout << "2. Login as a Student\n";
-        cout << "3. Developers of the program\n";
+        cout << "3. Developer of the program\n";
         cout << "4. Exit\n";
 
         int choice;
@@ -355,13 +350,10 @@ void mainMenu(const string& filename) {
             asStudent(filename);
         }else if (choice == 3) {
              cout<<"----------------------------------------------------\n";
-             cout << "NAME                     ID              SECTION\n";
+             cout << "NAME\n";
              cout<<"----------------------------------------------------\n";
-             cout<<"1.Surafel Fikru        UGR/35454/16         49\n";
-             cout<<"2.Lamesa Fekede        UGR/34787/16         49\n";
-             cout<<"3.Birhanu Habtamu      UGR/34109/16         49\n";
-             cout<<"4.Robel Michael        UGR/35282/16         49\n";
-
+             cout<<"Melkamu Wako\n";
+            
              int option;
              cout<<"\n 1.back\n 2.exit\n ";
              cout<<"Enter your option: ";
