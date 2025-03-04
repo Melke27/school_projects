@@ -1,0 +1,700 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <queue>
+#include<algorithm>
+#include<limits>
+#include<map>
+#include<memory>
+using namespace std;
+// Define the structure for an Edge (Pipe)
+struct Edge {
+    string to; // Destination house ID
+    int distance; // Distance in meters
+    Edge(string t, int d) : to(t), distance(d) {} // Constructor for Edge
+};
+
+// Define the structure for a House (Node)
+struct House {
+    string id; // House ID
+    vector<Edge> outgoingPipes; // List of outgoing pipes
+    vector<Edge> incomingPipes; // List of incoming pipes
+};
+struct Path {
+    vector<string> nodes;
+    int distance;
+};
+
+const int INF = numeric_limits<int>::max(); // Large value to represent infinity
+
+House* findHouseById(const vector<unique_ptr<House> >& houses, const string& id) {
+    for (size_t i = 0; i < houses.size(); ++i) {
+        if (houses[i]->id == id) {
+            return houses[i].get();
+        }
+    }
+    return nullptr;
+}
+
+//finds the shortest distance between two nodes(Houses)
+Path findShortestPath(const std::vector<std::unique_ptr<House> >& houses, const std::string& from, const std::string& to) {
+    std::map<std::string, int> dist;
+    std::map<std::string, std::string> prev;
+    std::priority_queue<std::pair<int, std::string>, std::vector<std::pair<int, std::string> >, std::greater<std::pair<int, std::string> > > pq;
+
+    for (std::vector<std::unique_ptr<House> >::const_iterator houseIt = houses.begin(); houseIt != houses.end(); ++houseIt) {
+        dist[(*houseIt)->id] = INF;
+        prev[(*houseIt)->id] = "";
+    }
+
+    dist[from] = 0;
+    pq.push(std::make_pair(0, from));
+
+    while (!pq.empty()) {
+        int d = pq.top().first;
+        std::string u = pq.top().second;
+        pq.pop();
+
+        if (d > dist[u]) continue;
+
+        House* currentHouse = findHouseById(houses, u);
+        if (currentHouse) {
+            for (std::vector<Edge>::const_iterator edgeIt = currentHouse->outgoingPipes.begin(); edgeIt != currentHouse->outgoingPipes.end(); ++edgeIt) {
+                std::string v = edgeIt->to;
+                int weight = edgeIt->distance;
+                if (dist[v] > dist[u] + weight) {
+                    dist[v] = dist[u] + weight;
+                    prev[v] = u;
+                    pq.push(std::make_pair(dist[v], v));
+                }
+            }
+        }
+    }
+
+    Path path;
+    if (dist[to] != INF) { // Only construct the path if a path exists
+        std::string current = to;
+        while (current != "") {
+            path.nodes.push_back(current);
+            current = prev[current];
+        }
+        std::reverse(path.nodes.begin(), path.nodes.end());
+        path.distance = dist[to];
+    } else {
+      path.distance = INF;
+      path.nodes.clear(); // Ensure nodes is empty if no path
+    }
+    return path;
+}
+
+//Transversal function
+vector<string> findReachableHouses(const vector<unique_ptr<House> >& houses, const string& startHouseId) {
+    House* startHouse = findHouseById(houses, startHouseId);
+    if (!startHouse) {
+        cerr << "Start house not found!" << endl;
+
+    }
+
+    vector<string> reachableHouseIds;
+    queue<string> q;
+    map<string, bool> visited; // Use a map for efficient visited tracking
+
+    q.push(startHouse->id);
+    visited[startHouse->id] = true;
+    reachableHouseIds.push_back(startHouse->id);
+
+    while (!q.empty()) {
+        string currentHouseId = q.front();
+        q.pop();
+
+       if (House* currentHouse = findHouseById(houses, currentHouseId)) {
+    // Iterator-based loop (C++98 compatible)
+    for (vector<Edge>::const_iterator it = currentHouse->outgoingPipes.begin(); it != currentHouse->outgoingPipes.end(); ++it) {
+        const Edge& edge = *it; // Get a reference to the current Edge
+
+        if (!visited[edge.to]) {
+            q.push(edge.to);
+            visited[edge.to] = true;
+            reachableHouseIds.push_back(edge.to);
+        }
+    }
+}
+    }
+    return reachableHouseIds;
+}
+// Function to print the current map of the network
+
+void printNetworkMap(const vector<unique_ptr<House> >& houses, const vector<string>& reachableHouses) {
+    cout << "---------------------------------------------------------------" << endl;
+    cout << "Water Supply Network Map:" << endl;
+
+    for (size_t i = 0; i < houses.size(); ++i) {
+        cout << houses[i]->id << " -> ";
+
+        for (vector<Edge>::const_iterator edge_it = houses[i]->outgoingPipes.begin(); edge_it != houses[i]->outgoingPipes.end(); ++edge_it) {
+            cout << edge_it->to << "(" << edge_it->distance << "m)";
+            if (edge_it + 1 != houses[i]->outgoingPipes.end()) {
+                cout << ", ";
+            }
+        }
+
+        // Improved connectivity check using reachableHouses
+        if (houses[i]->id != "WaterSupply" && find(reachableHouses.begin(), reachableHouses.end(), houses[i]->id) == reachableHouses.end()) {
+            cout << " (not connected)";
+        }
+        cout << endl;
+    }
+
+    cout << "---------------------------------------------------------------" << endl;
+    cout << "Legend:" << endl;
+    cout << "-> : Outgoing pipe connection to another house" << endl;
+    cout << "(100m) : Distance of the pipe in meters" << endl;
+    cout << "(not connected) : Indicates that the house is not reachable from the Water Supply" << endl;
+    cout << "---------------------------------------------------------------" << endl;
+}
+
+
+
+// Function to add a house to the network
+void addHouse(vector<unique_ptr<House> >& houses, const string& houseID) {
+    unique_ptr<House> newHouse(new House()); // Create a unique_ptr
+    newHouse->id = houseID;
+    houses.push_back(std::move(newHouse));   // Move ownership into the vector
+}
+
+void addPipe(vector<unique_ptr<House> >& houses, const string& from, const string& to, int distance) {
+    House* fromHouse = findHouseById(houses, from);
+    House* toHouse = findHouseById(houses, to);
+
+    if (fromHouse && toHouse) {
+        fromHouse->outgoingPipes.push_back(Edge(to, distance));
+        toHouse->incomingPipes.push_back(Edge(from, distance));
+    }
+}
+// Function to remove a house from the network
+void removeHouse(vector<unique_ptr<House> >& houses, const string& houseID) {
+    for (vector<unique_ptr<House> >::iterator it = houses.begin(); it != houses.end(); ++it) {
+        if ((*it)->id == houseID) {
+            // Collect upstream and downstream houses (using IDs)
+            vector<string> upstreamHouseIds;
+            vector<string> downstreamHouseIds;
+
+            for (size_t i = 0; i < houses.size(); ++i) {
+                if (houses[i]->id != houseID) {
+                    for (vector<Edge>::const_iterator edgeIt = houses[i]->outgoingPipes.begin(); edgeIt != houses[i]->outgoingPipes.end(); ++edgeIt) {
+                        if (edgeIt->to == houseID) {
+                            upstreamHouseIds.push_back(houses[i]->id);
+                        }
+                    }
+                    for (vector<Edge>::const_iterator edgeIt = houses[i]->incomingPipes.begin(); edgeIt != houses[i]->incomingPipes.end(); ++edgeIt) {
+                        if (edgeIt->to == houseID) {
+                            downstreamHouseIds.push_back(houses[i]->id);
+                        }
+                    }
+                }
+            }
+
+            // Remove pipes connected to the house to remove
+            for (size_t i = 0; i < houses.size(); ++i) {
+                if (houses[i]->id != houseID) {
+                    for (vector<Edge>::iterator edgeIt = houses[i]->outgoingPipes.begin(); edgeIt != houses[i]->outgoingPipes.end();) {
+                        if (edgeIt->to == houseID) {
+                            edgeIt = houses[i]->outgoingPipes.erase(edgeIt);
+                        } else {
+                            ++edgeIt;
+                        }
+                    }
+                    for (vector<Edge>::iterator edgeIt = houses[i]->incomingPipes.begin(); edgeIt != houses[i]->incomingPipes.end();) {
+                        if (edgeIt->to == houseID) {
+                            edgeIt = houses[i]->incomingPipes.erase(edgeIt);
+                        } else {
+                            ++edgeIt;
+                        }
+                    }
+                }
+            }
+
+
+            // Reconnect upstream and downstream houses (using IDs)
+            for (size_t i = 0; i < upstreamHouseIds.size(); ++i) {
+                for (size_t j = 0; j < downstreamHouseIds.size(); ++j) {
+                    House* upstreamHouse = findHouseById(houses, upstreamHouseIds[i]);
+                    House* downstreamHouse = findHouseById(houses, downstreamHouseIds[j]);
+                    if(upstreamHouse && downstreamHouse){
+                        bool connected = false;
+                        for (vector<Edge>::const_iterator edge_it = upstreamHouse->outgoingPipes.begin(); edge_it != upstreamHouse->outgoingPipes.end(); ++edge_it) {
+                            if (edge_it->to == downstreamHouse->id) {
+                                connected = true;
+                                break;
+                            }
+                        }
+                        if (!connected) {
+                            Path shortestPath = findShortestPath(houses, upstreamHouse->id, downstreamHouse->id);
+                            if (shortestPath.distance != INF) {
+                                string from = upstreamHouse->id;
+                                string to = downstreamHouse->id;
+                                int distance = shortestPath.distance;
+                                addPipe(houses, from, to, distance);
+                            } else {
+                                cout << "No path found to reconnect " << upstreamHouse->id << " and " << downstreamHouse->id << endl;
+                            }
+                        }
+                    }
+                }
+            }
+
+            it = houses.erase(it); // Erase the house
+            cout << "House " << houseID << " removed." << endl;
+            return;
+        }
+    }
+    cout << "House " << houseID << " not found." << endl;
+}
+// Function to remove a pipe between houses
+void removePipe(vector<unique_ptr<House> >& houses, const string& from, const string& to) {
+    bool pipeRemoved = false;
+
+    House* fromHouse = findHouseById(houses, from);
+    House* toHouse = findHouseById(houses, to);
+
+    if (fromHouse) {
+        for (vector<Edge>::iterator it = fromHouse->outgoingPipes.begin(); it != fromHouse->outgoingPipes.end();) {
+            if (it->to == to) {
+                it = fromHouse->outgoingPipes.erase(it);
+                cout << "Pipe removed from " << from << " to " << to << "." << endl;
+                pipeRemoved = true;
+                break;
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    if (toHouse) {
+        for (vector<Edge>::iterator it = toHouse->incomingPipes.begin(); it != toHouse->incomingPipes.end();) {
+            if (it->to == from) {
+                it = toHouse->incomingPipes.erase(it);
+                if (!pipeRemoved) {
+                    cout << "Pipe removed from " << to << " to " << from << "." << endl;
+                }
+                pipeRemoved = true;
+                break;
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    if (!pipeRemoved) {
+        cout << "Pipe from " << from << " to " << to << " not found." << endl;
+    }
+}
+
+
+//A block to simulate a pipe blockage fixing
+std::vector<std::unique_ptr<House> > copyHouses(const std::vector<std::unique_ptr<House> >& originalHouses) {
+    std::vector<std::unique_ptr<House> > copiedHouses;
+    for (std::vector<std::unique_ptr<House> >::const_iterator houseIt = originalHouses.begin(); houseIt != originalHouses.end(); ++houseIt) {
+        copiedHouses.push_back(std::unique_ptr<House>(new House(*(*houseIt)))); // Deep copy
+    }
+    return copiedHouses;
+}
+bool pipeExists(const std::vector<std::unique_ptr<House> >& houses, const std::string& from, const std::string& to) {
+    House* fromHouse = findHouseById(houses, from);
+    if (fromHouse) {
+        for (std::vector<Edge>::const_iterator it = fromHouse->outgoingPipes.begin(); it != fromHouse->outgoingPipes.end(); ++it) {
+            if (it->to == to) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void simulateBlockage(std::vector<std::unique_ptr<House> >& houses, const std::string& from, const std::string& to) {
+    cout<<"-------------------------------------------------------------------"<<endl;
+
+
+    // Check if the pipe exists *before* doing anything else
+    if (!pipeExists(houses, from, to)) {
+        cout << "Pipe from " << from << " to " << to << " does not exist.\n";
+        cout<<"-------------------------------------------------------------------";
+        return;
+    }
+    cout << "\nFixing blockage of pipe from " << from << " to " << to << ":\n";
+    cout << "House " << to << " is not getting water.\n";
+
+    std::vector<std::unique_ptr<House> > originalHousesCopy = copyHouses(houses); // Copy before removal
+    removePipe(houses, from, to);
+
+    House* fromHouse = findHouseById(houses, from);
+    House* toHouse = findHouseById(houses, to);
+
+    if (!fromHouse || !toHouse) {
+        cout << "One or both houses not found." << endl;
+        cout<<"-------------------------------------------------------------------";
+        return;
+    }
+
+    Path shortestPath;
+    std::vector<std::unique_ptr<House> > housesCopy;
+
+    std::vector<std::string> sisterHouseIds;
+    for (std::vector<std::unique_ptr<House> >::iterator houseIt = houses.begin(); houseIt != houses.end(); ++houseIt) {
+        if ((*houseIt)->id != from && (*houseIt)->id != "WaterSupply") {
+            std::string commonSource = "";
+            for (std::vector<Edge>::const_iterator edgeItFrom = fromHouse->incomingPipes.begin(); edgeItFrom != fromHouse->incomingPipes.end(); ++edgeItFrom) {
+                for (std::vector<Edge>::const_iterator edgeItHouse = (*houseIt)->incomingPipes.begin(); edgeItHouse != (*houseIt)->incomingPipes.end(); ++edgeItHouse) {
+                    if (edgeItFrom->to == edgeItHouse->to) {
+                        commonSource = edgeItFrom->to;
+                        break;
+                    }
+                }
+                if (commonSource != "") break;
+            }
+            if (commonSource != "") {
+                sisterHouseIds.push_back((*houseIt)->id);
+            }
+        }
+    }
+
+    if (!sisterHouseIds.empty()) {
+        std::string bestIntermediateHouse = sisterHouseIds[0];
+        int shortestDistanceToSister = findShortestPath(houses, "WaterSupply", bestIntermediateHouse).distance;
+
+        for (size_t i = 1; i < sisterHouseIds.size(); ++i) {
+            int dist = findShortestPath(houses, "WaterSupply", sisterHouseIds[i]).distance;
+            if (dist < shortestDistanceToSister) {
+                shortestDistanceToSister = dist;
+                bestIntermediateHouse = sisterHouseIds[i];
+            }
+        }
+
+        int newPipeDistance = 50;
+        addPipe(houses, bestIntermediateHouse, to, newPipeDistance);
+        cout << "Added new pipe from " << bestIntermediateHouse << " to " << to << " with distance " << newPipeDistance << ".\n";
+
+        housesCopy = copyHouses(houses);
+        shortestPath = findShortestPath(housesCopy, "WaterSupply", to);
+    } else {
+        cout << from << " has no sister houses. Reconstructing the original path to " << to << ".\n";
+
+        Path pathToFrom = findShortestPath(originalHousesCopy, "WaterSupply", from); // Use the copy WITHOUT blockage
+        Path pathToTo = findShortestPath(originalHousesCopy, from, to); // Use the copy WITHOUT blockage
+
+        if (pathToFrom.distance == INF || pathToTo.distance == INF) {
+            cout << "No path found to reroute.\n";
+            cout<<"-------------------------------------------------------------------";
+            return;
+        }
+
+        shortestPath.nodes = pathToFrom.nodes;
+        shortestPath.nodes.insert(shortestPath.nodes.end(), pathToTo.nodes.begin() + 1, pathToTo.nodes.end());
+
+        cout << "The New Path Water Supply to " << to << ": ";
+        for (std::vector<std::string>::const_iterator node_it = shortestPath.nodes.begin(); node_it != shortestPath.nodes.end(); ++node_it) {
+            cout << *node_it << (node_it + 1 == shortestPath.nodes.end() ? "" : " ");
+        }
+        cout << "\n";
+
+        cout << "Adding new pipes to establish the alternative path:\n";
+        for (size_t i = 0; i < shortestPath.nodes.size() - 1; ++i) {
+            std::string fromNode = shortestPath.nodes[i];
+            std::string toNode = shortestPath.nodes[i + 1];
+            int newPipeDistance = 50;
+            if (findShortestPath(houses, fromNode, toNode).distance == INF) {
+                addPipe(houses, fromNode, toNode, newPipeDistance);
+                cout << "Added pipe from " << fromNode << " to " << toNode << " with distance " << newPipeDistance << ".\n";
+            }
+        }
+        housesCopy = copyHouses(houses);
+        shortestPath = findShortestPath(housesCopy, "WaterSupply", to);
+    }
+
+    cout << "New shortest path to " << to << ": ";
+    if (shortestPath.distance == INF) {
+        cout << "No path found.\n";
+    } else {
+        for (std::vector<std::string>::const_iterator node_it = shortestPath.nodes.begin(); node_it != shortestPath.nodes.end(); ++node_it) {
+            cout << *node_it << (node_it + 1 == shortestPath.nodes.end() ? "" : " ");
+        }
+        cout << "\nDistance: " << shortestPath.distance <<"m"<< endl;
+    }
+    cout<<"-------------------------------------------------------------------";
+}
+// Function to add initial houses and their pipes
+void addInitialHousesAndPipes(vector<unique_ptr<House> >& houses) {
+    addHouse(houses, "WaterSupply");
+    addHouse(houses, "01");
+    addHouse(houses, "02");
+    addHouse(houses, "03");
+    addHouse(houses, "04");
+    addHouse(houses, "05");
+    addHouse(houses, "06");
+    addHouse(houses, "07");
+    addHouse(houses, "08");
+    addHouse(houses, "09");
+    addHouse(houses, "10");
+
+    addPipe(houses, "WaterSupply", "01", 100);
+    addPipe(houses, "WaterSupply", "02", 150);
+    addPipe(houses, "WaterSupply", "06", 200);
+    addPipe(houses, "01", "04", 120);
+    addPipe(houses, "02", "03", 80);
+    addPipe(houses, "02", "07", 95);
+    addPipe(houses, "06", "08", 90);
+    addPipe(houses, "07", "05", 140);
+    addPipe(houses, "07", "10", 160);
+    addPipe(houses, "08", "09", 130);
+}
+//To know the number of houses in the networking
+int getNumberOfHouses(const std::vector<std::unique_ptr<House> >& houses) {
+    return houses.size();
+}
+
+int main() {
+    vector<unique_ptr<House> > houses; // Correct type throughout!
+    addInitialHousesAndPipes(houses);
+
+
+
+    int choice;
+    do {
+        int numHouses = getNumberOfHouses(houses);
+        std::vector<std::string> reachableFromWaterSupply = findReachableHouses(houses, "WaterSupply");
+        int numReachableHouses = reachableFromWaterSupply.size()-1;
+        int numUnreachableHouses = numHouses - numReachableHouses - (findHouseById(houses, "WaterSupply") != nullptr);
+
+        cout << "--------------------------------------------------";
+        cout << "\nCITY WATER SUPPLY MANAGEMENT SYSTEM\n";
+        cout << "--------------------------------------------------\n";
+        cout << "Total number of houses in the network: " << numHouses-1 << "\n";
+        cout << "Number of houses receiving water: " << numReachableHouses << "\n";
+        cout << "Number of houses NOT receiving water: " << numUnreachableHouses << "\n";
+        cout << "----------------------//--------------------------\n";
+        cout << "1. Print Network Map\n";
+        cout << "2. Add House\n";
+        cout << "3. Add Pipe\n";
+        cout << "4. Remove House\n";
+        cout << "5. Remove Pipe\n";
+        cout << "6. Find Shortest Path\n";
+        cout << "7. Simulate Blockage\n";
+        cout << "0. Exit\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: {
+                vector<string> reachableFromWaterSupply = findReachableHouses(houses, "WaterSupply");
+                printNetworkMap(houses,reachableFromWaterSupply);
+                int subChoice;
+                do {
+                    cout << "\n1. Return to Main Menu\n";
+                    cout << "0. Exit\n";
+                    cout << "Enter your choice: ";
+                    cin >> subChoice;
+                    switch (subChoice) {
+                        case 1: break;
+                        case 0: choice = 0; break;
+                        default: cout << "Invalid choice. Please try again.\n";
+                    }
+                } while (subChoice != 1 && choice != 0);
+                break;
+            }
+            case 2: {
+    string houseID;
+    bool validIdEntered = false; // Flag to control the loop
+
+    while (!validIdEntered) { // Loop until a valid ID is entered
+        cout << "Enter House ID to add: ";
+        cin >> houseID;
+
+        if (findHouseById(houses, houseID)) {
+            cout << "House with ID " << houseID << " already exists. Please enter a unique ID.\n";
+        } else {
+            addHouse(houses, houseID);
+            validIdEntered = true; // Set the flag to exit the loop
+            int subChoice;
+            do {
+                cout << "\nNote: The House is scuccesfully added to the system\n but it needs to be connected to a new pipe to get water\nSo add pipe that connects the house to the network back in the main menu\n";
+                cout << "\n1. Print Network Map\n";
+                cout << "2. Return to Main Menu\n";
+                cout << "0. Exit\n";
+                cout << "Enter your choice: ";
+                cin >> subChoice;
+                switch (subChoice) {
+                    case 1: {
+                        vector<string> reachableFromWaterSupply = findReachableHouses(houses, "WaterSupply");
+                        printNetworkMap(houses, reachableFromWaterSupply);
+                        break;
+                    }
+                    case 2: break;
+                    case 0: choice = 0; break;
+                    default: cout << "Invalid choice. Please try again.\n";
+                }
+            } while (subChoice != 2 && choice != 0);
+        }
+    }
+    break;
+}
+            case 3: {
+                string from, to;
+                int distance;
+                cout << "Enter source House ID: ";
+                cin >> from;
+                cout << "Enter destination House ID: ";
+                cin >> to;
+                cout << "Enter pipe distance: ";
+                cin >> distance;
+                addPipe(houses, from, to, distance);
+                int subChoice;
+                do {
+                    cout << "\n1. Print Network Map\n";
+                    cout << "2. Return to Main Menu\n";
+                    cout << "0. Exit\n";
+                    cout << "Enter your choice: ";
+                    cin >> subChoice;
+                    switch (subChoice) {
+                       case 1: {
+                        vector<string> reachableFromWaterSupply = findReachableHouses(houses, "WaterSupply");
+                        printNetworkMap(houses, reachableFromWaterSupply);
+                        break;}
+                        case 2: break;
+                        case 0: choice = 0; break;
+                        default: cout << "Invalid choice. Please try again.\n";
+                    }
+                } while (subChoice != 2 && choice != 0);
+                break;
+            }
+            case 4: {
+                string houseID;
+                cout << "Enter House ID to remove: ";
+                cin >> houseID;
+                removeHouse(houses, houseID);
+                int subChoice;
+                do {
+                    cout << "\n1. Print Network Map\n";
+                    cout << "2. Return to Main Menu\n";
+                    cout << "0. Exit\n";
+                    cout << "Enter your choice: ";
+                    cin >> subChoice;
+                    switch (subChoice) {
+                        case 1: {
+                        vector<string> reachableFromWaterSupply = findReachableHouses(houses, "WaterSupply");
+                        printNetworkMap(houses, reachableFromWaterSupply);
+                        break;}
+                        case 2: break;
+                        case 0: choice = 0; break;
+                        default: cout << "Invalid choice. Please try again.\n";
+                    }
+                } while (subChoice != 2 && choice != 0);
+                break;
+            }
+            case 5: {
+                string from, to;
+                cout << "Enter source House ID to remove pipe from: ";
+                cin >> from;
+                cout << "Enter destination House ID to remove pipe to: ";
+                cin >> to;
+                removePipe(houses, from, to);
+                int subChoice;
+                do {
+                    cout << "\n1. Print Network Map\n";
+                    cout << "2. Return to Main Menu\n";
+                    cout << "0. Exit\n";
+                    cout << "Enter your choice: ";
+                    cin >> subChoice;
+                    switch (subChoice) {
+                        case 1: {
+                        vector<string> reachableFromWaterSupply = findReachableHouses(houses, "WaterSupply");
+                        printNetworkMap(houses, reachableFromWaterSupply);
+                        break;}
+                        case 2: break;
+                        case 0: choice = 0; break;
+                        default: cout << "Invalid choice. Please try again.\n";
+                    }
+                } while (subChoice != 2 && choice != 0);
+                break;
+            }
+            case 6: {
+                string start, end;
+                cout << "Enter starting house: ";
+                cin >> start;
+                cout << "Enter ending house: ";
+                cin >> end;
+
+                Path shortestPath = findShortestPath(houses, start, end);
+
+                if (shortestPath.distance != INF) {
+                    cout << "Shortest path from " << start << " to " << end << ": ";
+                    for (vector<string>::const_iterator node_it = shortestPath.nodes.begin(); node_it != shortestPath.nodes.end(); ++node_it) {
+                        cout << *node_it << (node_it + 1 == shortestPath.nodes.end() ? "" : " ");
+                    }
+                    cout << "\nDistance: " << shortestPath.distance << endl;
+                } else {
+                    cout << "No path found from " << start << " to " << end << endl;
+                }
+                int subChoice;
+                do {
+                    cout << "1. Return to Main Menu\n";
+                    cout << "0. Exit\n";
+                    cout << "Enter your choice: ";
+                    cin >> subChoice;
+                    switch (subChoice) {
+
+                        case 1: break;
+                        case 0: choice = 0; break;
+                        default: cout << "Invalid choice. Please try again.\n";
+                    }
+                } while (subChoice != 1 && choice != 0);
+                break;
+            }
+            case 7: {
+                string from, to;
+                cout << "Enter source house of blocked pipe: ";
+                cin >> from;
+                cout << "Enter destination house of blocked pipe: ";
+                cin >> to;
+
+                House* fromHouse = findHouseById(houses, from);
+                House* toHouse = findHouseById(houses, to);
+
+                if (!fromHouse || !toHouse) {
+                    cout << "One or both of the houses does not exist" << endl;
+                } else {
+                    simulateBlockage(houses, from, to);
+                }
+                int subChoice;
+                do {
+                    cout << "\n1. Print Network Map\n";
+                    cout << "2. Return to Main Menu\n";
+                    cout << "0. Exit\n";
+                    cout << "Enter your choice: ";
+                    cin >> subChoice;
+                    switch (subChoice) {
+                        case 1: {
+                        vector<string> reachableFromWaterSupply = findReachableHouses(houses, "WaterSupply");
+                        printNetworkMap(houses, reachableFromWaterSupply);
+                        break;}
+                        case 2: break;
+                        case 0: choice = 0; break;
+                        default: cout << "Invalid choice. Please try again.\n";
+                    }
+                } while (subChoice != 2 && choice != 0);
+                break;
+            }
+            case 0:
+                cout << "Exiting program.\n";
+                break;
+            default:
+                cout << "Invalid choice. Please try again.\n";
+        }
+    } while (choice != 0);
+
+   // Memory cleanup (at the END of main)
+    houses.clear();
+    return 0;
+}
+
+
+
