@@ -1,0 +1,155 @@
+import java.awt.*;
+import java.util.ArrayList;
+import javax.swing.*;
+
+class Student {
+    String name, id, section, department;
+    ArrayList<String> courses = new ArrayList<>();
+    ArrayList<Double> creditHours = new ArrayList<>();
+    ArrayList<Integer> scores = new ArrayList<>();
+    ArrayList<String> grades = new ArrayList<>();
+    double gpa, sgpa;
+
+    public Student(String name, String id, String section, String department) {
+        this.name = name;
+        this.id = id;
+        this.section = section;
+        this.department = department;
+    }
+
+    public void addCourse(String course, double creditHour, int score) {
+        courses.add(course);
+        creditHours.add(creditHour);
+        scores.add(score);
+        grades.add(calculateGrade(score));
+    }
+
+    public String calculateGrade(int score) {
+        if (score >= 90) return "A+";
+        if (score >= 85) return "A";
+        if (score >= 80) return "A-";
+        if (score >= 75) return "B+";
+        if (score >= 70) return "B";
+        if (score >= 65) return "B-";
+        if (score >= 60) return "C+";
+        if (score >= 50) return "C";
+        if (score >= 45) return "C-";
+        if (score >= 40) return "D";
+        return "F";
+    }
+
+    public double calculateGPA() {
+        double totalPoints = 0.0, totalCredits = 0.0;
+        for (int i = 0; i < scores.size(); i++) {
+            double gradePoint = switch (grades.get(i)) {
+                case "A+", "A" -> 4.0;
+                case "A-" -> 3.75;
+                case "B+" -> 3.5;
+                case "B" -> 3.0;
+                case "B-" -> 2.75;
+                case "C+" -> 2.5;
+                case "C" -> 2.0;
+                case "C-" -> 1.75;
+                case "D" -> 1.0;
+                default -> 0.0;
+            };
+            totalPoints += creditHours.get(i) * gradePoint;
+            totalCredits += creditHours.get(i);
+        }
+        gpa = (totalCredits > 0) ? totalPoints / totalCredits : 0.0;
+        return gpa;
+    }
+
+    public double calculateSGPA() {
+        sgpa = calculateGPA(); // Assuming SGPA is calculated per semester, same as GPA for now
+        return sgpa;
+    }
+}
+
+public class GradeManagementApp {
+    private static ArrayList<Student> students = new ArrayList<>();
+    
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(GradeManagementApp::createGUI);
+    }
+    
+    private static void createGUI() {
+        JFrame frame = new JFrame("Grade Management System");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(500, 400);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        
+        JButton addStudentBtn = new JButton("Add Student");
+        JButton viewStudentsBtn = new JButton("View Students");
+
+        addStudentBtn.addActionListener(e -> addStudentDialog(frame));
+        viewStudentsBtn.addActionListener(e -> viewStudentsDialog(frame));
+        
+        panel.add(addStudentBtn);
+        panel.add(viewStudentsBtn);
+        frame.add(panel);
+        
+        frame.setVisible(true);
+    }
+    
+    private static void addStudentDialog(JFrame frame) {
+        JTextField nameField = new JTextField();
+        JTextField idField = new JTextField();
+        JTextField sectionField = new JTextField();
+        JTextField departmentField = new JTextField();
+        
+        JPanel panel = new JPanel(new GridLayout(0, 1));
+        panel.add(new JLabel("Name:"));
+        panel.add(nameField);
+        panel.add(new JLabel("ID:"));
+        panel.add(idField);
+        panel.add(new JLabel("Section:"));
+        panel.add(sectionField);
+        panel.add(new JLabel("Department:"));
+        panel.add(departmentField);
+        
+        int result = JOptionPane.showConfirmDialog(frame, panel, "Enter Student Details", JOptionPane.OK_CANCEL_OPTION);
+        if (result == JOptionPane.OK_OPTION) {
+            Student student = new Student(nameField.getText(), idField.getText(), sectionField.getText(), departmentField.getText());
+            while (true) {
+                JTextField courseField = new JTextField();
+                JTextField creditField = new JTextField();
+                JTextField scoreField = new JTextField();
+
+                JPanel coursePanel = new JPanel(new GridLayout(0, 1));
+                coursePanel.add(new JLabel("Course Name:"));
+                coursePanel.add(courseField);
+                coursePanel.add(new JLabel("Credit Hours:"));
+                coursePanel.add(creditField);
+                coursePanel.add(new JLabel("Score:"));
+                coursePanel.add(scoreField);
+
+                int courseResult = JOptionPane.showConfirmDialog(frame, coursePanel, "Enter Course Details", JOptionPane.OK_CANCEL_OPTION);
+                if (courseResult == JOptionPane.OK_OPTION) {
+                    student.addCourse(courseField.getText(), Double.parseDouble(creditField.getText()), Integer.parseInt(scoreField.getText()));
+                } else {
+                    break;
+                }
+            }
+            students.add(student);
+        }
+    }
+
+    private static void viewStudentsDialog(JFrame frame) {
+        StringBuilder sb = new StringBuilder();
+        for (Student s : students) {
+            sb.append("Name: ").append(s.name).append("\nID: ").append(s.id)
+              .append("\nSection: ").append(s.section).append("\nDepartment: ").append(s.department)
+              .append("\nGPA: ").append(s.calculateGPA()).append("\nSGPA: ").append(s.calculateSGPA()).append("\nCourses: ");
+            for (int i = 0; i < s.courses.size(); i++) {
+                sb.append("\n - ").append(s.courses.get(i)).append(" (Credit: ").append(s.creditHours.get(i)).append(", Score: ").append(s.scores.get(i)).append(")");
+            }
+            sb.append("\n\n");
+        }
+        JTextArea textArea = new JTextArea(sb.toString());
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        JOptionPane.showMessageDialog(frame, scrollPane, "Student List", JOptionPane.INFORMATION_MESSAGE);
+    }
+}
