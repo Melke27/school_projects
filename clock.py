@@ -2,12 +2,8 @@ from cs1graphics import*
 import time
  
 """
-## Student name
-1, Fiteh Tesfaye...............ugr/34460/16......49
+## developer name
 2, Melkamu Wako................ugr/34915/16......49
-3, Nigus Hagos.................ugr/35183/16......49
-4, Robassa Adam................ugr/35277/16......50
-5, Robel Abebaw................ugr/35278/16......49
 
 This file contains the variable names and some other docmtations.
 
