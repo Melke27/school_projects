@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scientific Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        
+        .calculator {
+            width: 350px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .display {
+            width: 100%;
+            height: 60px;
+            margin-bottom: 20px;
+            padding: 10px;
+            font-size: 24px;
+            text-align: right;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            box-sizing: border-box;
+        }
+        
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-gap: 8px;
+        }
+        
+        button {
+            height: 50px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #d0d0d0;
+        }
+        
+        button.operator {
+            background-color: #f5923e;
+            color: white;
+        }
+        
+        button.operator:hover {
+            background-color: #e0812d;
+        }
+        
+        button.function {
+            background-color: #5d9cec;
+            color: white;
+        }
+        
+        button.function:hover {
+            background-color: #4a89dc;
+        }
+        
+        button.clear {
+            background-color: #ff6b6b;
+            color: white;
+        }
+        
+        button.clear:hover {
+            background-color: #e05555;
+        }
+        
+        button.equals {
+            background-color: #4CAF50;
+            color: white;
+            grid-column: span 2;
+        }
+        
+        button.equals:hover {
+            background-color: #3e8e41;
+        }
+        
+        .history-btn {
+            background-color: #a0d468;
+            color: white;
+        }
+        
+        .history-btn:hover {
+            background-color: #8cc152;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <input type="text" class="display" id="display" readonly>
+        <div class="buttons">
+            <button class="clear" onclick="clearDisplay()">C</button>
+            <button onclick="deleteLastChar()">⌫</button>
+            <button class="history-btn" onclick="showHistory()">HIST</button>
+            <button class="operator" onclick="appendToDisplay('(')">(</button>
+            <button class="operator" onclick="appendToDisplay(')')">)</button>
+            
+            <button class="function" onclick="calculateFunction('Math.sin(')">sin</button>
+            <button class="function" onclick="calculateFunction('Math.cos(')">cos</button>
+            <button class="function" onclick="calculateFunction('Math.tan(')">tan</button>
+            <button class="operator" onclick="appendToDisplay('/')">/</button>
+            <button class="operator" onclick="appendToDisplay('*')">×</button>
+            
+            <button class="function" onclick="calculateFunction('Math.asin(')">sin⁻¹</button>
+            <button class="function" onclick="calculateFunction('Math.acos(')">cos⁻¹</button>
+            <button class="function" onclick="calculateFunction('Math.atan(')">tan⁻¹</button>
+            <button onclick="appendToDisplay('7')">7</button>
+            <button onclick="appendToDisplay('8')">8</button>
+            
+            <button class="function" onclick="appendToDisplay('Math.PI')">π</button>
+            <button class="function" onclick="calculateFunction('Math.log(')">ln</button>
+            <button class="function" onclick="calculateFunction('Math.log10(')">log</button>
+            <button onclick="appendToDisplay('9')">9</button>
+            <button class="operator" onclick="appendToDisplay('-')">-</button>
+            
+            <button class="function" onclick="calculateFunction('Math.sqrt(')">√</button>
+            <button class="function" onclick="appendToDisplay('Math.E')">e</button>
+            <button class="function" onclick="calculateFunction('Math.pow(10,')">10ˣ</button>
+            <button onclick="appendToDisplay('4')">4</button>
+            <button onclick="appendToDisplay('5')">5</button>
+            
+            <button class="function" onclick="calculateFunction('Math.pow(')">xʸ</button>
+            <button class="function" onclick="factorial()">x!</button>
+            <button class="function" onclick="calculateFunction('1/')">1/x</button>
+            <button onclick="appendToDisplay('6')">6</button>
+            <button class="operator" onclick="appendToDisplay('+')">+</button>
+            
+            <button class="function" onclick="appendToDisplay('Math.pow(')">^</button>
+            <button class="function" onclick="percentage()">%</button>
+            <button class="function" onclick="appendToDisplay('Math.abs(')">|x|</button>
+            <button onclick="appendToDisplay('1')">1</button>
+            <button onclick="appendToDisplay('2')">2</button>
+            
+            <button class="function" onclick="appendToDisplay('-')">±</button>
+            <button onclick="appendToDisplay('0')">0</button>
+            <button onclick="appendToDisplay('.')">.</button>
+            <button onclick="appendToDisplay('3')">3</button>
+            <button class="equals" onclick="calculate()">=</button>
+        </div>
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        let calculationHistory = [];
+        
+        function appendToDisplay(value) {
+            display.value += value;
+        }
+        
+        function clearDisplay() {
+            display.value = '';
+        }
+        
+        function deleteLastChar() {
+            display.value = display.value.slice(0, -1);
+        }
+        
+        function calculateFunction(func) {
+            display.value += func;
+        }
+        
+        function factorial() {
+            try {
+                const num = parseFloat(display.value);
+                if (isNaN(num)) {
+                    throw new Error('Invalid input');
+                }
+                if (num < 0) {
+                    throw new Error('Negative number');
+                }
+                if (num % 1 !== 0) {
+                    throw new Error('Non-integer');
+                }
+                
+                let result = 1;
+                for (let i = 2; i <= num; i++) {
+                    result *= i;
+                }
+                
+                addToHistory(`${num}! = ${result}`);
+                display.value = result;
+            } catch (error) {
+                display.value = 'Error';
+                setTimeout(clearDisplay, 1000);
+            }
+        }
+        
+        function percentage() {
+            try {
+                const expression = display.value;
+                const result = eval(expression) / 100;
+                
+                addToHistory(`${expression}% = ${result}`);
+                display.value = result;
+            } catch (error) {
+                display.value = 'Error';
+                setTimeout(clearDisplay, 1000);
+            }
+        }
+        
+        function calculate() {
+            try {
+                // Replace × with * for proper evaluation
+                let expression = display.value.replace(/×/g, '*');
+                
+                // Handle implied multiplication with parentheses
+                expression = expression.replace(/(\d+)\(/g, '$1*(');
+                expression = expression.replace(/\)(\d+)/g, ')*$1');
+                expression = expression.replace(/\)\(/g, ')*(');
+                
+                const result = eval(expression);
+                
+                if (isNaN(result) || !isFinite(result)) {
+                    throw new Error('Invalid calculation');
+                }
+                
+                addToHistory(`${expression} = ${result}`);
+                display.value = result;
+            } catch (error) {
+                display.value = 'Error';
+                setTimeout(clearDisplay, 1000);
+            }
+        }
+        
+        function addToHistory(entry) {
+            calculationHistory.unshift(entry);
+            if (calculationHistory.length > 10) {
+                calculationHistory.pop();
+            }
+        }
+        
+        function showHistory() {
+            if (calculationHistory.length === 0) {
+                alert('No history yet');
+                return;
+            }
+            alert('Calculation History:\n\n' + calculationHistory.join('\n'));
+        }
+        
+        // Add keyboard support
+        document.addEventListener('keydown', function(event) {
+            const key = event.key;
+            
+            if (/[0-9\.\+\-\*\/\(\)]/.test(key)) {
+                appendToDisplay(key);
+            } else if (key === 'Enter') {
+                calculate();
+            } else if (key === 'Escape') {
+                clearDisplay();
+            } else if (key === 'Backspace') {
+                deleteLastChar();
+            } else if (key === 'x' || key === 'X') {
+                appendToDisplay('*');
+            } else if (key === '^') {
+                appendToDisplay('Math.pow(');
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
